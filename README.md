@@ -1,74 +1,120 @@
-# ArchiveVault UI
+# ArchiveVault API
 
-React frontend for ArchiveVault. Talks to the [archivault-api](../archivault-api) backend via REST. Deliberately decoupled — point it at any company's backend via `.env` to reuse it.
+## What's new in v2
+
+- **Fixed `/docs`**: v1's nginx config proxied `/api/`, `/docs`, and `/health` as separate path rules, which silently broke `/openapi.json` (needed by the Swagger UI page) — it fell through to a catch-all and returned plain text instead of JSON. v2's nginx template proxies the whole API in a single `location /` block, so nothing gets shadowed.
+- **Configurable port, independent of the UI**: `API_PORT` and `BIND_HOST` are now settings in `.env` (defaults: `8000` / `127.0.0.1`). `setup.sh` prompts for the port and lets you choose between nginx-proxied (domain/IP on port 80/443) or direct-expose (no nginx, plain `host:port`) — useful when the API and UI live on separate machines.
+- **bcrypt pinned**: `requirements.txt` now pins `bcrypt==4.0.1` explicitly, avoiding the passlib crash that could happen when an unpinned install pulled bcrypt 4.1+.
+- App version bumped to `2.0.0`.
+
+---
+
+Backend service for ArchiveVault — indexes and tracks ex-employee data stored on offline SAS drives.
 
 ## Stack
-- React 18 + Vite
-- Tailwind CSS
-- Zustand (auth state)
-- React Router
+- Python 3.12 + FastAPI
+- PostgreSQL 16
+- SQLAlchemy + Alembic (migrations)
+- Nginx + Gunicorn (production)
 
-## One-Command Deploy (Ubuntu 24.04, alongside or separate from the API server)
-
-```bash
-git clone <this-repo> archivault-ui
-cd archivault-ui
-sudo bash deploy.sh
-```
-
-Prompts for your backend API URL, company name, and the domain/IP to serve on. Installs Node.js if missing, builds the production bundle, and configures Nginx automatically.
-
-## Upgrading
+## One-Command Setup (Ubuntu 24.04 LTS)
 
 ```bash
-cd /path/to/archivault-ui
-sudo bash upgrade-frontend.sh
+git clone <this-repo> archivault-api
+cd archivault-api
+sudo bash setup.sh
 ```
 
-Pulls latest code, rebuilds, redeploys — keeps your existing `.env` untouched.
+The script will prompt for:
+- Server domain/IP
+- Admin email & password
+- Frontend URL (for CORS)
+
+It installs PostgreSQL, Python, Nginx, creates the database, runs all migrations, creates your admin account, generates your first indexer token, and starts the API as a systemd service.
+
+At the end it prints your **API URL**, **admin credentials**, and **indexer token** — save these.
+
+## Upgrading (Future Versions)
+
+```bash
+cd /opt/archivault
+sudo bash upgrade.sh
+```
+
+This pulls the latest code, installs new dependencies, runs **only new** database migrations (existing data is never touched), and restarts the service. Safe to run anytime.
 
 ## Local Development
 
 ```bash
-npm install
-cp .env.example .env   # set VITE_API_URL to your backend
-npm run dev
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # edit DATABASE_URL etc.
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-Runs on `http://localhost:3000` with API requests proxied to your backend.
+API docs available at `http://localhost:8000/docs`.
 
-## Reusing for a Different Company
-
-This frontend has no hardcoded company data. To reuse it elsewhere:
-
-1. Clone this repo fresh
-2. Set `.env`:
-   ```
-   VITE_API_URL=https://their-backend.com
-   VITE_COMPANY_NAME=Their Company Name
-   ```
-3. Run `deploy.sh`
-
-No code changes needed.
-
-## Structure
+## Project Structure
 
 ```
-src/
-  api/             Axios client + all API call functions
-  store/           Zustand auth store
-  pages/
-    LoginPage.jsx
-    admin/         IT Manager / Admin views (drives, employees, files, requests, users, tokens)
-    portal/        Employee self-service portal (browse own files, request retrieval)
-  App.jsx          Routing + auth guards
+app/
+  main.py              FastAPI app entrypoint
+  core/                config, database, security (JWT, password hashing)
+  models/               SQLAlchemy models (all tables)
+  schemas/             Pydantic request/response schemas
+  api/v1/routes/       All API endpoints, grouped by resource
+migrations/            Alembic migrations — versioned schema history
+scripts/               One-off setup scripts (create_admin, generate_token)
+setup.sh                Full server provisioning (run once)
+upgrade.sh              Safe upgrade script (run anytime)
 ```
 
-## Roles & Access
+## Database Migrations
 
-| Role | Access |
+Every schema change must go through Alembic — never edit the database directly.
+
+```bash
+# After changing a model in app/models/__init__.py:
+alembic revision --autogenerate -m "describe your change"
+alembic upgrade head
+```
+
+Commit the generated migration file in `migrations/versions/` to git. When you deploy, `upgrade.sh` applies it automatically.
+
+## API Overview
+
+All endpoints are under `/api/v1`. Full interactive docs at `/docs`.
+
+| Group | Purpose |
 |---|---|
-| `superadmin` / `admin` | Full admin panel — drives, employees, all files, user management, indexer tokens |
-| `employee` | Employee portal only — their own files, retrieval requests |
+| `/auth` | Login, token refresh, current user |
+| `/employees` | Ex-employee records, their drives, their files |
+| `/drives` | Physical drive registry + shelf locations |
+| `/files` | Global file search, retrieval time estimates |
+| `/indexer` | Endpoints used by the Indexer tool (token-authenticated) |
+| `/requests` | Retrieval request lifecycle |
+| `/admin` | Stats, user management |
 
-Role-based routing is enforced in `App.jsx` — employees are redirected away from `/admin`, admins from `/portal`.
+## Indexer Authentication
+
+The Indexer tool (separate repo) authenticates via a long-lived token, not user login. Generate tokens from the admin UI (`Indexer Tokens` page) or via API:
+
+```bash
+curl -X POST https://your-server/api/v1/indexer/token \
+  -H "Authorization: Bearer <admin_jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Linux Mint - IT Desk"}'
+```
+
+## Environment Variables
+
+See `.env.example` for all options. Key ones:
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SECRET_KEY` | JWT signing key — keep secret |
+| `SAS_READ_SPEED_MBPS` | Used to calculate retrieval time estimates (default 500) |
+| `ALLOWED_ORIGINS` | Comma-separated frontend URLs for CORS |
