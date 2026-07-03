@@ -27,4 +27,4 @@ rm -rf "${WEB_ROOT:?}"/*
 cp -r dist/* "$WEB_ROOT/"
 
 systemctl reload nginx
-log "Frontend upgraded successfully — existing .env preserved"
+log "Frontend upgraded successfully — server config (localStorage) is per-browser and untouched by this script"

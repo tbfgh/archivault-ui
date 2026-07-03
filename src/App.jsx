@@ -1,7 +1,9 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { isApiConfigured } from './utils/apiConfig'
 
+import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
@@ -18,6 +20,11 @@ import PortalLayout from './pages/portal/PortalLayout'
 import PortalDashboard from './pages/portal/PortalDashboard'
 import PortalBrowse from './pages/portal/PortalBrowse'
 import PortalRequests from './pages/portal/PortalRequests'
+
+function RequireApiConfig({ children }) {
+  if (!isApiConfigured()) return <Navigate to="/setup" replace />
+  return children
+}
 
 function RequireAuth({ children, adminOnly = false }) {
   const { isAuthenticated, role } = useAuthStore()
@@ -39,14 +46,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/setup" element={<SetupPage />} />
+
         <Route path="/login" element={
-          isAuthenticated
-            ? <Navigate to={role === 'employee' ? '/portal' : '/admin'} replace />
-            : <LoginPage />
+          <RequireApiConfig>
+            {isAuthenticated
+              ? <Navigate to={role === 'employee' ? '/portal' : '/admin'} replace />
+              : <LoginPage />}
+          </RequireApiConfig>
         } />
 
         {/* Admin routes */}
-        <Route path="/admin" element={<RequireAuth adminOnly><AdminLayout /></RequireAuth>}>
+        <Route path="/admin" element={<RequireApiConfig><RequireAuth adminOnly><AdminLayout /></RequireAuth></RequireApiConfig>}>
           <Route index element={<Dashboard />} />
           <Route path="drives" element={<DrivesPage />} />
           <Route path="drives/:id" element={<DriveDetail />} />
@@ -59,16 +70,18 @@ export default function App() {
         </Route>
 
         {/* Employee portal routes */}
-        <Route path="/portal" element={<RequireEmployee><PortalLayout /></RequireEmployee>}>
+        <Route path="/portal" element={<RequireApiConfig><RequireEmployee><PortalLayout /></RequireEmployee></RequireApiConfig>}>
           <Route index element={<PortalDashboard />} />
           <Route path="browse" element={<PortalBrowse />} />
           <Route path="requests" element={<PortalRequests />} />
         </Route>
 
         <Route path="/" element={
-          isAuthenticated
-            ? <Navigate to={role === 'employee' ? '/portal' : '/admin'} replace />
-            : <Navigate to="/login" replace />
+          !isApiConfigured()
+            ? <Navigate to="/setup" replace />
+            : isAuthenticated
+              ? <Navigate to={role === 'employee' ? '/portal' : '/admin'} replace />
+              : <Navigate to="/login" replace />
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

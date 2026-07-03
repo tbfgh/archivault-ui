@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api'
 import { useAuthStore } from '../store/authStore'
+import { getCompanyName, getApiUrl } from '../utils/apiConfig'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -32,7 +33,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🗄️</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>
-            {import.meta.env.VITE_COMPANY_NAME || 'ArchiveVault'}
+            {getCompanyName()}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
             Offline Drive Index & Retrieval System
@@ -60,6 +61,12 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: 'var(--text-muted)' }}>
+          Connected to <code>{getApiUrl()}</code>
+          {' · '}
+          <a href="/setup" style={{ color: 'var(--accent)' }}>Change server</a>
         </div>
       </div>
     </div>

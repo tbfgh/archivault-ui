@@ -81,7 +81,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {requests.map(r => (
-                <tr key={r.id} style={{ borderTop: '1px solid var(--border)' }}
+                <tr key={r.id}
                   onClick={() => navigate('/admin/requests')}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

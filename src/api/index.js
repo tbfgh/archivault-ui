@@ -1,12 +1,25 @@
 import axios from 'axios'
+import { getApiUrl } from '../utils/apiConfig'
+
+function apiBase() {
+  const url = getApiUrl()
+  if (!url) {
+    // Shouldn't happen if the route guard in App.jsx is working, but
+    // fail safe rather than silently hitting a relative/undefined URL.
+    window.location.href = '/setup'
+    throw new Error('API URL not configured')
+  }
+  return `${url}/api/v1`
+}
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || ''}/api/v1`,
   headers: { 'Content-Type': 'application/json' }
 })
 
-// Attach token to every request
+// Resolve baseURL per-request (not at module load) so a change made on
+// the Setup page takes effect immediately without a page reload.
 api.interceptors.request.use(config => {
+  config.baseURL = apiBase()
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
@@ -23,7 +36,7 @@ api.interceptors.response.use(
       if (refresh) {
         try {
           const r = await axios.post(
-            `${import.meta.env.VITE_API_URL || ''}/api/v1/auth/refresh`,
+            `${apiBase()}/auth/refresh`,
             { refresh_token: refresh }
           )
           localStorage.setItem('access_token', r.data.access_token)
@@ -31,7 +44,9 @@ api.interceptors.response.use(
           original.headers.Authorization = `Bearer ${r.data.access_token}`
           return api(original)
         } catch {
-          localStorage.clear()
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          localStorage.removeItem('role')
           window.location.href = '/login'
         }
       } else {
