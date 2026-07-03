@@ -6,7 +6,7 @@
 - **Ports fully decoupled.** `deploy.sh` now asks for `UI_PORT` (what nginx listens on) completely independently of the API's port — the two are no longer coupled by shared nginx path rules.
 - **Reconfigurable anytime**: visit `/setup` from the login page ("Change server" link) to point the same install at a different API without rebuilding.
 - Works identically whether the API and UI are on the same server or split across two — it's just a URL.
-- App version bumped to `2.0.0`.
+- App version bumped to `1.1.0`.
 
 Reinstalling after v1? Users' browsers may still have an old, empty `archivault_api_url`-less state — that's fine, they'll just see the Setup screen once.
 
