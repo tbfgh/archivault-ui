@@ -15,6 +15,9 @@ import FilesPage from './pages/admin/FilesPage'
 import RequestsPage from './pages/admin/RequestsPage'
 import UsersPage from './pages/admin/UsersPage'
 import TokensPage from './pages/admin/TokensPage'
+import DepartmentsPage from './pages/admin/DepartmentsPage'
+import BatchesPage from './pages/admin/BatchesPage'
+import BackupPage from './pages/admin/BackupPage'
 
 import PortalLayout from './pages/portal/PortalLayout'
 import PortalDashboard from './pages/portal/PortalDashboard'
@@ -26,10 +29,11 @@ function RequireApiConfig({ children }) {
   return children
 }
 
-function RequireAuth({ children, adminOnly = false }) {
+function RequireAuth({ children, adminOnly = false, superadminOnly = false }) {
   const { isAuthenticated, role } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (adminOnly && role === 'employee') return <Navigate to="/portal" replace />
+  if (superadminOnly && role !== 'superadmin') return <Navigate to="/admin" replace />
   return children
 }
 
@@ -67,6 +71,9 @@ export default function App() {
           <Route path="requests" element={<RequestsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="tokens" element={<TokensPage />} />
+          <Route path="departments" element={<RequireAuth superadminOnly><DepartmentsPage /></RequireAuth>} />
+          <Route path="batches" element={<RequireAuth superadminOnly><BatchesPage /></RequireAuth>} />
+          <Route path="backup" element={<RequireAuth superadminOnly><BackupPage /></RequireAuth>} />
         </Route>
 
         {/* Employee portal routes */}

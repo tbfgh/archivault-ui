@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api'
-import { LayoutDashboard, HardDrive, Users, FileSearch, ClipboardList, UserCog, Key, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, HardDrive, Users, FileSearch, ClipboardList, UserCog, Key, LogOut, Menu, X, Building2, Layers, DatabaseBackup } from 'lucide-react'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -12,6 +12,14 @@ const navItems = [
   { to: '/admin/requests', label: 'Requests', icon: ClipboardList },
   { to: '/admin/users', label: 'Users', icon: UserCog },
   { to: '/admin/tokens', label: 'Indexer Tokens', icon: Key },
+]
+
+// Superadmin-only nav items — kept separate so regular admins never see these
+// links exist, matching the backend's superadmin-only route guards.
+const superadminNavItems = [
+  { to: '/admin/departments', label: 'Departments', icon: Building2 },
+  { to: '/admin/batches', label: 'Indexer Batches', icon: Layers },
+  { to: '/admin/backup', label: 'Backup & Restore', icon: DatabaseBackup },
 ]
 
 export default function AdminLayout() {
@@ -35,6 +43,21 @@ export default function AdminLayout() {
     overflow: 'hidden'
   }
 
+  const renderNavLink = ({ to, label, icon: Icon, end }) => (
+    <NavLink key={to} to={to} end={end} style={({ isActive }) => ({
+      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
+      borderRadius: 8, marginBottom: 2, textDecoration: 'none',
+      color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+      background: isActive ? 'rgba(79,110,247,0.12)' : 'transparent',
+      fontSize: 13, fontWeight: isActive ? 600 : 400,
+      whiteSpace: 'nowrap', overflow: 'hidden',
+      transition: 'all 0.15s'
+    })}>
+      <Icon size={17} style={{ flexShrink: 0 }} />
+      {sidebarOpen && label}
+    </NavLink>
+  )
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       {/* Sidebar */}
@@ -47,20 +70,15 @@ export default function AdminLayout() {
         </div>
 
         <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
-              borderRadius: 8, marginBottom: 2, textDecoration: 'none',
-              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-              background: isActive ? 'rgba(79,110,247,0.12)' : 'transparent',
-              fontSize: 13, fontWeight: isActive ? 600 : 400,
-              whiteSpace: 'nowrap', overflow: 'hidden',
-              transition: 'all 0.15s'
-            })}>
-              <Icon size={17} style={{ flexShrink: 0 }} />
-              {sidebarOpen && label}
-            </NavLink>
-          ))}
+          {navItems.map(renderNavLink)}
+          {user?.role === 'superadmin' && (
+            <>
+              <div style={{ margin: '10px 10px 6px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', opacity: sidebarOpen ? 1 : 0 }}>
+                Superadmin
+              </div>
+              {superadminNavItems.map(renderNavLink)}
+            </>
+          )}
         </nav>
 
         <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border)' }}>
