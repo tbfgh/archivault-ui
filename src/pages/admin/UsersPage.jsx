@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { adminApi, employeeApi } from '../../api'
+import { adminApi, employeeApi, departmentApi } from '../../api'
 import { UserPlus, X } from 'lucide-react'
 
 const ROLE_COLOR = { superadmin: 'var(--error)', admin: 'var(--accent)', employee: 'var(--text-muted)' }
@@ -7,25 +7,39 @@ const ROLE_COLOR = { superadmin: 'var(--error)', admin: 'var(--accent)', employe
 export default function UsersPage() {
   const [users, setUsers] = useState([])
   const [employees, setEmployees] = useState([])
+  const [departments, setDepartments] = useState([])
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ email: '', full_name: '', password: '', role: 'employee', employee_id: '' })
+  const [form, setForm] = useState({ email: '', full_name: '', password: '', role: 'employee', employee_id: '', department_ids: [] })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
   const load = () => {
     adminApi.users().then(r => setUsers(r.data)).finally(() => setLoading(false))
     employeeApi.list({ limit: 200 }).then(r => setEmployees(r.data))
+    departmentApi.list().then(r => setDepartments(r.data)).catch(() => setDepartments([]))
   }
   useEffect(() => { load() }, [])
+
+  const toggleDept = (id) => {
+    setForm(f => {
+      const next = new Set(f.department_ids)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return { ...f, department_ids: [...next] }
+    })
+  }
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
     try {
-      const payload = { ...form, employee_id: form.employee_id ? parseInt(form.employee_id) : null }
+      const payload = {
+        ...form,
+        employee_id: form.employee_id ? parseInt(form.employee_id) : null,
+        department_ids: form.role === 'admin' ? form.department_ids : [],
+      }
       await adminApi.createUser(payload)
       setShowCreate(false)
-      setForm({ email: '', full_name: '', password: '', role: 'employee', employee_id: '' })
+      setForm({ email: '', full_name: '', password: '', role: 'employee', employee_id: '', department_ids: [] })
       load()
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create user')
@@ -115,6 +129,24 @@ export default function UsersPage() {
                     <option value="">— Select Employee —</option>
                     {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.emp_code})</option>)}
                   </select>
+                </div>
+              )}
+              {form.role === 'admin' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label>Department Access</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 160, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    {departments.length === 0 && (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        No departments exist yet — create one on the Departments page first, or leave unassigned (this admin will see no data until assigned).
+                      </span>
+                    )}
+                    {departments.map(d => (
+                      <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <input type="checkbox" checked={form.department_ids.includes(d.id)} onChange={() => toggleDept(d.id)} />
+                        {d.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
               {error && <div style={{ color: 'var(--error)', fontSize: 12, marginBottom: 12 }}>{error}</div>}

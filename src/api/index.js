@@ -115,3 +115,36 @@ export const indexerApi = {
   createToken: (d) => api.post('/indexer/token', d),
   revokeToken: (id) => api.delete(`/indexer/token/${id}`),
 }
+
+// ── Departments ───────────────────────────────────────────────
+export const departmentApi = {
+  list: () => api.get('/departments'),
+  create: (d) => api.post('/departments', d),
+  rename: (id, d) => api.put(`/departments/${id}`, d),
+  remove: (id) => api.delete(`/departments/${id}`),
+  usersWithDepartments: () => api.get('/departments/users'),
+  assign: (userId, departmentIds) => api.put('/departments/assign', { user_id: userId, department_ids: departmentIds }),
+}
+
+// ── Batches (superadmin only) ────────────────────────────────────
+export const batchApi = {
+  list: (params) => api.get('/admin/batches', { params }),
+  files: (sessionId) => api.get(`/admin/batches/${sessionId}/files`),
+  bulkUpdate: (sessionId, d) => api.put(`/admin/batches/${sessionId}/bulk-update`, d),
+}
+
+// ── Backup & Restore (superadmin only) ────────────────────────────
+export const backupApi = {
+  create: () => api.post('/admin/backup/create'),
+  list: () => api.get('/admin/backup/list'),
+  safetyList: () => api.get('/admin/backup/safety-list'),
+  remove: (filename) => api.delete(`/admin/backup/${filename}`),
+  // blob responseType needed since a plain <a href> download wouldn't carry
+  // the Authorization header the interceptor attaches to axios requests
+  download: (filename) => api.get(`/admin/backup/download/${filename}`, { responseType: 'blob' }),
+  restoreUpload: (formData) => api.post('/admin/backup/restore', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  restoreExisting: (filename) => api.post(`/admin/backup/restore-existing/${filename}`),
+  restoreStatus: () => api.get('/admin/backup/restore/status'),
+}
