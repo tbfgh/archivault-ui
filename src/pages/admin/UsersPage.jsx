@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { adminApi, employeeApi, departmentApi } from '../../api'
+import { useAuthStore } from '../../store/authStore'
 import { UserPlus, X } from 'lucide-react'
 
 const ROLE_COLOR = { superadmin: 'var(--error)', admin: 'var(--accent)', employee: 'var(--text-muted)' }
 
 export default function UsersPage() {
+  const { role } = useAuthStore()
+  const isSuperadmin = role === 'superadmin'
   const [users, setUsers] = useState([])
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
@@ -34,6 +37,7 @@ export default function UsersPage() {
     try {
       const payload = {
         ...form,
+        role: isSuperadmin ? form.role : 'employee',
         employee_id: form.employee_id ? parseInt(form.employee_id) : null,
         department_ids: form.role === 'admin' ? form.department_ids : [],
       }
@@ -84,9 +88,13 @@ export default function UsersPage() {
                 </td>
                 <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>{new Date(u.created_at).toLocaleDateString()}</td>
                 <td style={{ padding: '12px 14px' }}>
-                  <button className="btn-outline" onClick={() => toggleActive(u)} style={{ fontSize: 11, padding: '4px 10px' }}>
-                    {u.is_active ? 'Disable' : 'Enable'}
-                  </button>
+                  {(isSuperadmin || u.role !== 'superadmin') ? (
+                    <button className="btn-outline" onClick={() => toggleActive(u)} style={{ fontSize: 11, padding: '4px 10px' }}>
+                      {u.is_active ? 'Disable' : 'Enable'}
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -116,11 +124,20 @@ export default function UsersPage() {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label>Role</label>
-                <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                <select
+                  value={isSuperadmin ? form.role : 'employee'}
+                  disabled={!isSuperadmin}
+                  onChange={e => setForm({ ...form, role: e.target.value })}
+                >
                   <option value="employee">Employee</option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super Admin</option>
+                  {isSuperadmin && <option value="admin">Admin</option>}
+                  {isSuperadmin && <option value="superadmin">Super Admin</option>}
                 </select>
+                {!isSuperadmin && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Only superadmins can create admin or superadmin accounts.
+                  </div>
+                )}
               </div>
               {form.role === 'employee' && (
                 <div style={{ marginBottom: 16 }}>
