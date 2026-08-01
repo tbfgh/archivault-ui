@@ -18,6 +18,7 @@ import TokensPage from './pages/admin/TokensPage'
 import DepartmentsPage from './pages/admin/DepartmentsPage'
 import BatchesPage from './pages/admin/BatchesPage'
 import BackupPage from './pages/admin/BackupPage'
+import AccountPage from './pages/AccountPage'
 
 import PortalLayout from './pages/portal/PortalLayout'
 import PortalDashboard from './pages/portal/PortalDashboard'
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="requests" element={<RequestsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="tokens" element={<TokensPage />} />
+          <Route path="account" element={<AccountPage />} />
           <Route path="departments" element={<RequireAuth superadminOnly><DepartmentsPage /></RequireAuth>} />
           <Route path="batches" element={<RequireAuth superadminOnly><BatchesPage /></RequireAuth>} />
           <Route path="backup" element={<RequireAuth superadminOnly><BackupPage /></RequireAuth>} />
@@ -81,6 +83,7 @@ export default function App() {
           <Route index element={<PortalDashboard />} />
           <Route path="browse" element={<PortalBrowse />} />
           <Route path="requests" element={<PortalRequests />} />
+          <Route path="account" element={<AccountPage />} />
         </Route>
 
         <Route path="/" element={

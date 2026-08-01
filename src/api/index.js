@@ -65,6 +65,7 @@ export const authApi = {
   refresh: (refresh_token) => api.post('/auth/refresh', { refresh_token }),
   me: () => api.get('/auth/me'),
   logout: () => api.post('/auth/logout'),
+  changePassword: (current_password, new_password) => api.post('/auth/change-password', { current_password, new_password }),
 }
 
 // ── Admin ─────────────────────────────────────────────────────

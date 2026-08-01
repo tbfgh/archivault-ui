@@ -2,12 +2,13 @@ import React from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api'
-import { LayoutDashboard, FolderOpen, ClipboardList, LogOut } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, ClipboardList, UserCircle, LogOut } from 'lucide-react'
 
 const navItems = [
   { to: '/portal', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/portal/browse', label: 'My Files', icon: FolderOpen },
   { to: '/portal/requests', label: 'My Requests', icon: ClipboardList },
+  { to: '/portal/account', label: 'My Account', icon: UserCircle },
 ]
 
 export default function PortalLayout() {

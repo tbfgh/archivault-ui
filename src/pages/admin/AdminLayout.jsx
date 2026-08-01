@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api'
-import { LayoutDashboard, HardDrive, Users, FileSearch, ClipboardList, UserCog, Key, LogOut, Menu, X, Building2, Layers, DatabaseBackup } from 'lucide-react'
+import { LayoutDashboard, HardDrive, Users, FileSearch, ClipboardList, UserCog, Key, LogOut, Menu, X, Building2, Layers, DatabaseBackup, UserCircle } from 'lucide-react'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -82,6 +82,17 @@ export default function AdminLayout() {
         </nav>
 
         <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border)' }}>
+          <NavLink to="/admin/account" style={({ isActive }) => ({
+            display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
+            borderRadius: 8, marginBottom: 2, textDecoration: 'none',
+            color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+            background: isActive ? 'rgba(79,110,247,0.12)' : 'transparent',
+            fontSize: 13, fontWeight: isActive ? 600 : 400,
+            whiteSpace: 'nowrap', overflow: 'hidden'
+          })}>
+            <UserCircle size={17} style={{ flexShrink: 0 }} />
+            {sidebarOpen && 'My Account'}
+          </NavLink>
           {sidebarOpen && (
             <div style={{ padding: '8px 10px', marginBottom: 6, fontSize: 12, color: 'var(--text-muted)' }}>
               <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{user?.full_name}</div>
