@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { batchApi, employeeApi, driveApi } from '../../api'
-import { Layers } from 'lucide-react'
+import { Layers, Trash2 } from 'lucide-react'
 
 export default function BatchesPage() {
   const [batches, setBatches] = useState([])
@@ -69,6 +69,23 @@ export default function BatchesPage() {
     }
   }
 
+  const handleDeleteBatch = async (sessionId) => {
+    const batch = batches.find(b => b.session_id === sessionId)
+    const label = batch ? `Drive ${batch.drive_number || batch.drive_id} · ${batch.total_files} files · started ${new Date(batch.started_at).toLocaleString()}` : `#${sessionId}`
+    if (!window.confirm(`Delete this batch permanently?\n\n${label}\n\nAll indexed file records in this batch will be removed. This cannot be undone.`)) return
+    setError('')
+    setSuccess('')
+    try {
+      const { data } = await batchApi.remove(sessionId)
+      setSuccess(`Deleted batch #${sessionId} (${data.deleted_files} file record(s) removed).`)
+      setSelectedBatch(null)
+      setBatchDetail(null)
+      await loadBatches()
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to delete batch')
+    }
+  }
+
   if (loading) return <div style={{ padding: 28, color: 'var(--text-muted)' }}>Loading...</div>
 
   return (
@@ -112,12 +129,23 @@ export default function BatchesPage() {
           {selectedBatch && batchDetail ? (
             <>
               <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-                  Batch #{selectedBatch}
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-                  {batchDetail.total} file(s) linked to this batch
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+                      Batch #{selectedBatch}
+                    </h2>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                      {batchDetail.total} file(s) linked to this batch
+                    </p>
+                  </div>
+                  <button
+                    className="btn-outline"
+                    onClick={() => handleDeleteBatch(selectedBatch)}
+                    style={{ fontSize: 12, padding: '6px 12px', color: 'var(--error)', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Trash2 size={13} /> Delete Batch
+                  </button>
+                </div>
 
                 <form onSubmit={handleBulkUpdate} style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 220 }}>

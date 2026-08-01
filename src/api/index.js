@@ -131,6 +131,7 @@ export const batchApi = {
   list: (params) => api.get('/admin/batches', { params }),
   files: (sessionId) => api.get(`/admin/batches/${sessionId}/files`),
   bulkUpdate: (sessionId, d) => api.put(`/admin/batches/${sessionId}/bulk-update`, d),
+  remove: (sessionId) => api.delete(`/admin/batches/${sessionId}`),
 }
 
 // ── Backup & Restore (superadmin only) ────────────────────────────
