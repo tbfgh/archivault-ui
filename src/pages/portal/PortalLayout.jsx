@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api'
 import { LayoutDashboard, FolderOpen, ClipboardList, UserCircle, LogOut } from 'lucide-react'
+import ThemeToggle from '../../components/ThemeToggle'
 
 const navItems = [
   { to: '/portal', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -42,6 +43,7 @@ export default function PortalLayout() {
         </nav>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <ThemeToggle compact />
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{user?.full_name}</span>
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 13 }}>
             <LogOut size={15} /> Sign Out

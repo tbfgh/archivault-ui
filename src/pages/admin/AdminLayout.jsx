@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api'
 import { LayoutDashboard, HardDrive, Users, FileSearch, ClipboardList, UserCog, Key, LogOut, Menu, X, Building2, Layers, DatabaseBackup, UserCircle } from 'lucide-react'
+import ThemeToggle from '../../components/ThemeToggle'
+import Footer from '../../components/Footer'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -69,6 +71,10 @@ export default function AdminLayout() {
           {sidebarOpen && <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--accent)', whiteSpace: 'nowrap' }}>ArchiveVault</span>}
         </div>
 
+        <div style={{ padding: '10px 14px 0', display: 'flex', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
+          <ThemeToggle compact={!sidebarOpen} />
+        </div>
+
         <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
           {navItems.map(renderNavLink)}
           {user?.role === 'superadmin' && (
@@ -112,9 +118,12 @@ export default function AdminLayout() {
       </div>
 
       {/* Main content */}
-      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg)' }}>
-        <Outlet />
-      </main>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg)' }}>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
     </div>
   )
 }

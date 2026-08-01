@@ -60,6 +60,10 @@ api.interceptors.response.use(
 export default api
 
 // ── Auth ──────────────────────────────────────────────────────
+export const metaApi = {
+  get: () => api.get('/meta'),
+}
+
 export const authApi = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   refresh: (refresh_token) => api.post('/auth/refresh', { refresh_token }),
