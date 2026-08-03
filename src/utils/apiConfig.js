@@ -1,38 +1,63 @@
-// v2: API base URL is configured at RUNTIME via the Setup screen and
-// stored in localStorage — not baked into the JS bundle at build time.
+// v2.1: Config now lives server-side (see server/index.js), not in the
+// browser's localStorage. That was a client-side state problem: every new
+// browser/device/private window pointed at an already-configured install
+// saw the Setup screen again, because localStorage is per-origin *and*
+// per-browser-profile. The server is the single source of truth now — any
+// client asking this install sees the same answer.
 //
-// This means the exact same build artifact can point at any API host/port
-// (localhost, a LAN IP, or a domain) without rebuilding — fixing the v1
-// "stale bundle" trap, where a source fix didn't take effect until an
-// explicit rebuild + redeploy.
+// _cache is populated once at app boot (see loadAppConfig(), called from
+// App.jsx before anything else renders) and kept in memory afterward so
+// getApiUrl()/isApiConfigured() can stay synchronous for callers like the
+// axios interceptor in api/index.js, which needs a value on every request
+// without awaiting a network round-trip each time.
 
-const API_URL_KEY = 'archivault_api_url'
-const COMPANY_NAME_KEY = 'archivault_company_name'
+let _cache = { configured: false, api_url: null, company_name: 'ArchiveVault' }
 
-/** Returns the configured API base URL (no trailing slash), or null if unset. */
+/** Fetches current config from this install's own server. Call once at boot. */
+export async function loadAppConfig() {
+  try {
+    const res = await fetch('/app-config')
+    const data = await res.json()
+    _cache = {
+      configured: !!data.configured,
+      api_url: data.api_url || null,
+      company_name: data.company_name || 'ArchiveVault',
+    }
+  } catch {
+    // Server unreachable or not yet responding — treat as unconfigured
+    // rather than throwing, so the app can still render the Setup screen.
+    _cache = { configured: false, api_url: null, company_name: 'ArchiveVault' }
+  }
+  return _cache
+}
+
+/** Persists config to this install's server (writes runtime-config.json) and updates the cache. */
+export async function saveAppConfig(apiUrl, companyName) {
+  const res = await fetch('/app-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_url: apiUrl, company_name: companyName }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data.detail || 'Failed to save configuration')
+  }
+  _cache = { configured: true, api_url: data.api_url, company_name: data.company_name || 'ArchiveVault' }
+  return _cache
+}
+
+/** Returns the configured API base URL (no trailing slash), or null if unset. Synchronous — reads the in-memory cache. */
 export function getApiUrl() {
-  const url = localStorage.getItem(API_URL_KEY)
-  return url ? url.replace(/\/+$/, '') : null
-}
-
-export function setApiUrl(url) {
-  localStorage.setItem(API_URL_KEY, url.replace(/\/+$/, ''))
-}
-
-export function clearApiUrl() {
-  localStorage.removeItem(API_URL_KEY)
-}
-
-export function isApiConfigured() {
-  return !!getApiUrl()
+  return _cache.api_url
 }
 
 export function getCompanyName() {
-  return localStorage.getItem(COMPANY_NAME_KEY) || 'ArchiveVault'
+  return _cache.company_name || 'ArchiveVault'
 }
 
-export function setCompanyName(name) {
-  if (name) localStorage.setItem(COMPANY_NAME_KEY, name)
+/** Synchronous — safe to call anywhere after loadAppConfig() has resolved once at boot. */
+export function isApiConfigured() {
+  return !!_cache.configured
 }
 
 /**

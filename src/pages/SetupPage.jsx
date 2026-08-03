@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setApiUrl, setCompanyName, testApiUrl, getApiUrl, getCompanyName } from '../utils/apiConfig'
+import { saveAppConfig, testApiUrl, getApiUrl, getCompanyName } from '../utils/apiConfig'
 
 export default function SetupPage() {
   const [apiUrl, setApiUrlInput] = useState(getApiUrl() || '')
@@ -12,11 +12,16 @@ export default function SetupPage() {
     e.preventDefault()
     setStatus('testing')
     const result = await testApiUrl(apiUrl)
-    setStatus(result)
-    if (result.ok) {
-      setApiUrl(apiUrl)
-      setCompanyName(companyName)
+    if (!result.ok) {
+      setStatus(result)
+      return
+    }
+    try {
+      await saveAppConfig(apiUrl, companyName)
+      setStatus({ ok: true })
       setTimeout(() => navigate('/login'), 600)
+    } catch (err) {
+      setStatus({ ok: false, reason: err.message || 'Connected, but failed to save configuration on the server.' })
     }
   }
 
@@ -29,7 +34,7 @@ export default function SetupPage() {
             Connect to your ArchiveVault server
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-            One-time setup — this browser will remember these settings.
+            One-time setup — this installation will remember these settings for every browser and device that opens it.
           </p>
         </div>
 

@@ -1,13 +1,14 @@
 #!/bin/bash
 # ============================================================
-#  ArchiveVault UI — Uninstall Script (v2)
+#  ArchiveVault UI — Uninstall Script (v2.1)
 #  Removes everything deploy.sh created, for a clean reinstall test.
 #  Run as: sudo bash uninstall-ui.sh
 #
-#  NOTE: The API URL / company name configured via the Setup screen
-#  live in each visiting BROWSER's localStorage, not on this server.
-#  This script can't clear that — see the printed note at the end for
-#  how to reset it per-browser if you want a fully clean re-test.
+#  v2.1: the API URL / company name configured via the Setup screen now
+#  live in a JSON file on THIS server (/var/lib/archivault-ui by
+#  default), not in each visiting browser's localStorage. This script
+#  asks separately whether to remove that, since it's real server state,
+#  not deployment build output.
 # ============================================================
 
 set -e
@@ -25,17 +26,21 @@ header() { echo -e "\n${BLUE}═════════════════
 
 if [ "$EUID" -ne 0 ]; then error "Please run as root: sudo bash uninstall-ui.sh"; fi
 
-WEB_ROOT="/var/www/archivault-ui"
+APP_DIR="/var/www/archivault-ui"
+CONFIG_DIR="/var/lib/archivault-ui"
 
 header "ArchiveVault UI — Uninstall"
 echo ""
 warn "This will PERMANENTLY remove:"
-echo "  • $WEB_ROOT (built static files)"
+echo "  • The archivault-ui systemd service"
+echo "  • $APP_DIR (deployed app code and build output)"
 echo "  • Nginx site config for archivault-ui"
 echo ""
 warn "Node.js and nginx itself are NOT removed (only the archivault-ui site)."
 warn "Your git clone / source directory is also left untouched — only the"
 warn "DEPLOYED build output and nginx config are removed."
+warn "The runtime config at ${CONFIG_DIR} (API URL, company name) is asked"
+warn "about SEPARATELY below, since it's real server state, not build output."
 echo ""
 
 read -p "Type 'yes' to confirm you want to proceed: " CONFIRM
@@ -44,7 +49,18 @@ if [ "$CONFIRM" != "yes" ]; then
     exit 0
 fi
 
-header "Step 1: Nginx Config"
+header "Step 1: systemd Service"
+if systemctl list-unit-files | grep -q archivault-ui.service; then
+    systemctl stop archivault-ui 2>/dev/null || true
+    systemctl disable archivault-ui 2>/dev/null || true
+    rm -f /etc/systemd/system/archivault-ui.service
+    systemctl daemon-reload
+    log "archivault-ui service stopped, disabled, and removed"
+else
+    warn "No archivault-ui service found — skipping"
+fi
+
+header "Step 2: Nginx Config"
 if [ -f /etc/nginx/sites-enabled/archivault-ui ] || [ -f /etc/nginx/sites-available/archivault-ui ]; then
     UI_PORT=$(grep -oP 'listen \K[0-9]+' /etc/nginx/sites-available/archivault-ui 2>/dev/null | head -1)
     rm -f /etc/nginx/sites-enabled/archivault-ui
@@ -57,15 +73,29 @@ else
     warn "No archivault-ui nginx config found — skipping"
 fi
 
-header "Step 2: Deployed Files"
-if [ -d "$WEB_ROOT" ]; then
-    rm -rf "$WEB_ROOT"
-    log "$WEB_ROOT removed"
+header "Step 3: Deployed App Code"
+if [ -d "$APP_DIR" ]; then
+    rm -rf "$APP_DIR"
+    log "$APP_DIR removed"
 else
-    warn "$WEB_ROOT not found — skipping"
+    warn "$APP_DIR not found — skipping"
 fi
 
-header "Step 3: Firewall Rule (optional)"
+header "Step 4: Runtime Config (API URL, company name)"
+if [ -d "$CONFIG_DIR" ]; then
+    warn "Found ${CONFIG_DIR} — this is the server-side setup answer, not build output."
+    read -p "Remove it too, so the next install prompts for Setup again? [y/N]: " REMOVE_CONFIG
+    if [[ "$REMOVE_CONFIG" =~ ^[Yy]$ ]]; then
+        rm -rf "$CONFIG_DIR"
+        log "${CONFIG_DIR} removed — a fresh deploy.sh run will show the Setup screen again"
+    else
+        log "Left in place — redeploying with deploy.sh will pick it back up automatically, no Setup screen needed"
+    fi
+else
+    warn "${CONFIG_DIR} not found — skipping"
+fi
+
+header "Step 5: Firewall Rule (optional)"
 if command -v ufw &>/dev/null && [ -n "$UI_PORT" ]; then
     read -p "Remove the ufw rule for port ${UI_PORT}/tcp? [y/N]: " REMOVE_FW
     if [[ "$REMOVE_FW" =~ ^[Yy]$ ]]; then
@@ -83,14 +113,6 @@ echo "Not removed on purpose (source/tooling, not deployment artifacts):"
 echo "  • The git clone / source directory this script was run from"
 echo "  • node_modules (delete manually with: rm -rf node_modules dist)"
 echo "  • Node.js and nginx themselves"
-echo ""
-echo -e "${YELLOW}IMPORTANT — browser-side state:${NC}"
-echo "  The API URL / company name from the Setup screen are stored in"
-echo "  each browser's localStorage, not on this server. To fully reset"
-echo "  a test browser before reinstalling:"
-echo "    • Open DevTools -> Application -> Local Storage -> clear the"
-echo "      site's entries, OR"
-echo "    • Visit the site in a fresh Incognito/Private window"
 echo ""
 echo "Re-run 'sudo bash deploy.sh' from the source directory for a clean install."
 echo ""

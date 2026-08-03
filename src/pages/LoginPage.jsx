@@ -66,7 +66,13 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: 'var(--text-muted)' }}>
           Connected to <code>{getApiUrl()}</code>
           {' · '}
-          <a href="/setup" style={{ color: 'var(--accent)' }}>Change server</a>
+          <button
+            type="button"
+            onClick={() => navigate('/setup')}
+            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}
+          >
+            Change server
+          </button>
         </div>
       </div>
     </div>

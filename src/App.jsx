@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
-import { isApiConfigured } from './utils/apiConfig'
+import { isApiConfigured, loadAppConfig } from './utils/apiConfig'
 
 import SetupPage from './pages/SetupPage'
 import LoginPage from './pages/LoginPage'
@@ -47,6 +47,23 @@ function RequireEmployee({ children }) {
 
 export default function App() {
   const { isAuthenticated, role } = useAuthStore()
+  const [configLoaded, setConfigLoaded] = useState(false)
+
+  useEffect(() => {
+    loadAppConfig().finally(() => setConfigLoaded(true))
+  }, [])
+
+  // Block rendering until we've asked this install's own server whether
+  // it's configured — otherwise isApiConfigured() below would read the
+  // cache's unconfigured default and flash the Setup screen even on an
+  // already-configured install.
+  if (!configLoaded) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 13 }}>
+        Loading…
+      </div>
+    )
+  }
 
   return (
     <BrowserRouter>
