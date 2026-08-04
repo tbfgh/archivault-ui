@@ -103,3 +103,7 @@ src/
 | `employee` | Employee portal only — their own files, retrieval requests |
 
 Role-based routing is enforced in `App.jsx` — employees are redirected away from `/admin`, admins from `/portal`.
+
+## License
+
+GPL-3.0. Copyright (C) 2026 Ittisal. Developed by Ali.
